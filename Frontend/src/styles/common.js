@@ -98,3 +98,19 @@ export const emptyStateClass = "text-center text-[#a1a1a6] py-16 text-sm";
 
 // ─── Divider ──────────────────────────────────────────
 export const divider = "border-t border-[#e8e8ed] my-10";
+
+
+
+// ─── Comments ─────────────────────────────────────────
+export const commentSection = "mt-10";
+export const commentHeader = "text-lg font-semibold mb-4 text-[#1d1d1f]";
+export const commentList = "flex flex-col gap-3 mb-4";
+export const commentItem = "bg-[#f5f5f7] rounded-xl p-3 flex gap-2";
+export const commentAuthor = "font-medium text-[#0066cc]";
+export const commentText = "text-[#1d1d1f]";
+
+export const commentForm = "flex gap-2 mt-3";
+export const commentInput =
+  "flex-1 bg-white border border-[#d2d2d7] rounded-xl px-4 py-2 text-[#1d1d1f] text-sm placeholder:text-[#a1a1a6] focus:outline-none focus:border-[#0066cc] focus:ring-2 focus:ring-[#0066cc]/10 transition";
+export const commentSubmitBtn =
+  "bg-[#0066cc] text-white px-4 py-2 rounded-full hover:bg-[#004499] transition text-sm font-medium cursor-pointer";

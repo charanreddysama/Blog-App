@@ -52,27 +52,30 @@ userRoute.get("/articles", verifyToken("USER"), async (req, res) => {
 
 //Add comment to an article(protected route)
 userRoute.put("/articles", verifyToken("USER"), async (req, res) => {
-  //get comment obj from req
-  const { user, articleId, comment } = req.body;
-  //check user(req.user)
-  console.log(req.user);
-  if (user !== req.user.userId) {
-    return res.status(403).json({ message: "Forbidden" });
-  }
-  //find artcleby id and update
-  let articleWithComment = await ArticleModel.findOneAndUpdate(
-    { _id: articleId, isArticleActive: true },
-    { $push: { comments: { user, comment } } },
-    { new: true, runValidators: true },
-  );
+  try {
+    const { articleId, comment } = req.body;
+    // Ensure comment is provided
+    if (!comment || !comment.trim()) {
+      return res.status(400).json({ message: "Comment cannot be empty" });
+    }
+    // Use the user ID from the verified token
+    const userId = req.user.userId;
+    // Find article and push comment
+    const articleWithComment = await ArticleModel.findOneAndUpdate(
+      { _id: articleId, isArticleActive: true },
+      { $push: { comments: { user: userId, comment } } },
+      { new: true, runValidators: true }
+    ).populate("comments.user", "firstName lastName"); // populate user info for frontend
 
-  //if article not found
-  if (!articleWithComment) {
-    return res.status(404).json({ message: "Article not found" });
+    if (!articleWithComment) {
+      return res.status(404).json({ message: "Article not found or inactive" });
+    }
+    res.status(200).json({
+      message: "Comment added successfully",
+      payload: articleWithComment,
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Server error", error: err.message });
   }
-  //send res
-  res.status(200).json({ message: "comment added successfully", payload: articleWithComment });
 });
-
-//next() ---> next middleware
-//next(err) ---> error handling middleware

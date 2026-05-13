@@ -17,34 +17,46 @@ import {
   deleteBtn,
   loadingClass,
   errorClass,
-  inputClass,
+  commentForm,
+  commentInput,
+  commentAuthor,
+  commentHeader,
+  commentList,
+  commentItem,
+  commentSubmitBtn,
+  commentSection,
+  commentText,
 } from "../styles/common.js";
-import { useForm } from "react-hook-form";
 
 function ArticleByID() {
   const { id } = useParams();
   const location = useLocation();
   const navigate = useNavigate();
-  const { register, handleSubmit } = useForm();
 
   const user = useAuth((state) => state.currentUser);
 
-  const [article, setArticle] = useState(location.state || null);
+  const [article, setArticle] = useState(location.state || { comments: [] });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [newComment, setNewComment] = useState("");
 
   useEffect(() => {
-    if (article) return;
+    if (article && article._id) return; // already loaded from location.state
 
     const getArticle = async () => {
       setLoading(true);
-
       try {
-        const res = await axios.get(`http://localhost:4000/user-api/article/${id}`, { withCredentials: true });
+        const res = await axios.get(`http://localhost:4000/user-api/article/${id}`, {
+          withCredentials: true,
+        });
 
-        setArticle(res.data.payload);
+        // populate comments array safely
+        setArticle({
+          ...res.data.payload,
+          comments: res.data.payload.comments || [],
+        });
       } catch (err) {
-        setError(err.response?.data?.error);
+        setError(err.response?.data?.message || "Failed to fetch article");
       } finally {
         setLoading(false);
       }
@@ -53,60 +65,57 @@ function ArticleByID() {
     getArticle();
   }, [id]);
 
-  const formatDate = (date) => {
-    return new Date(date).toLocaleString("en-IN", {
+  const formatDate = (date) =>
+    new Date(date).toLocaleString("en-IN", {
       timeZone: "Asia/Kolkata",
       dateStyle: "medium",
       timeStyle: "short",
     });
-  };
 
-  // delete & restore article
+  // AUTHOR actions
   const toggleArticleStatus = async () => {
     const newStatus = !article.isArticleActive;
-
-    const confirmMsg = newStatus ? "Restore this article?" : "Delete this article?";
-    if (!window.confirm(confirmMsg)) return;
+    if (!window.confirm(newStatus ? "Restore this article?" : "Delete this article?")) return;
 
     try {
       const res = await axios.patch(
         `http://localhost:4000/author-api/articles/${id}/status`,
         { isArticleActive: newStatus },
-        { withCredentials: true },
+        { withCredentials: true }
       );
 
-      console.log("SUCCESS:", res.data);
-
       setArticle(res.data.payload);
-
       toast.success(res.data.message);
     } catch (err) {
-      console.log("ERROR:", err.response);
-
-      const msg = err.response?.data?.message;
-
-      if (err.response?.status === 400) {
-        toast(msg); // already deleted/active case
-      } else {
-        setError(msg || "Operation failed");
-      }
+      toast.error(err.response?.data?.message || "Operation failed");
     }
   };
 
-  //edit article
   const editArticle = (articleObj) => {
     navigate("/edit-article", { state: articleObj });
   };
 
-  //post comment by user
-  const addComment = async (commentObj) => {
-    //add artcileId
-    commentObj.articleId = article._id;
-    console.log(commentObj);
-    let res = await axios.put("http://localhost:4000/user-api/articles", commentObj, { withCredentials: true });
-    if (res.status === 200) {
-      toast.success(res.data.message);
-      setArticle(res.data.payload);
+  // USER: add comment
+  const submitComment = async (e) => {
+    e.preventDefault();
+    if (!newComment.trim()) return;
+
+    try {
+      const res = await axios.put(
+        `http://localhost:4000/user-api/articles`,
+        { articleId: article._id, comment: newComment, user: user.userId },
+        { withCredentials: true }
+      );
+
+      setArticle((prev) => ({
+        ...prev,
+        comments: res.data.payload.comments || [],
+      }));
+
+      setNewComment("");
+      toast.success("Comment added!");
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Failed to add comment");
     }
   };
 
@@ -119,12 +128,9 @@ function ArticleByID() {
       {/* Header */}
       <div className={articleHeader}>
         <span className={articleCategory}>{article.category}</span>
-
         <h1 className={`${articleMainTitle} uppercase`}>{article.title}</h1>
-
         <div className={articleAuthorRow}>
           <div className={authorInfo}>✍️ {article.author?.firstName || "Author"}</div>
-
           <div>{formatDate(article.createdAt)}</div>
         </div>
       </div>
@@ -138,39 +144,40 @@ function ArticleByID() {
           <button className={editBtn} onClick={() => editArticle(article)}>
             Edit
           </button>
-
           <button className={deleteBtn} onClick={toggleArticleStatus}>
             {article.isArticleActive ? "Delete" : "Restore"}
           </button>
         </div>
       )}
-      {/* form to add comment if role is USER */}
-      {/* USER actions */}
-      {user?.role === "USER" && (
-        <div className={articleActions}>
-          <form onSubmit={handleSubmit(addComment)}>
+
+      {/* COMMENTS */}
+      <div className={commentSection}>
+        <h3 className={commentHeader}>Comments ({article.comments?.length || 0})</h3>
+        <div className={commentList}>
+          {article.comments?.map((c) => (
+            <div key={c._id} className={commentItem}>
+              <span className={commentAuthor}>{c.user?.firstName || "User"}:</span>
+              <span className={commentText}>{c.comment}</span>
+            </div>
+          ))}
+        </div>
+
+        {/* USER add comment */}
+        {user?.role === "USER" && (
+          <form className={commentForm} onSubmit={submitComment}>
             <input
               type="text"
-              {...register("comment")}
-              className={inputClass}
-              placeholder="Write your comment here..."
+              placeholder="Write a comment..."
+              className={commentInput}
+              value={newComment}
+              onChange={(e) => setNewComment(e.target.value)}
             />
-            <button type="submit" className="bg-amber-600 text-white px-5 py-2 rounded-2xl mt-5">
-              Add comment
+            <button type="submit" className={commentSubmitBtn}>
+              Submit
             </button>
           </form>
-        </div>
-      )}
-
-      {/* comments */}
-      {article.comments.map((comment) => (
-        <div className="bg-gray-300 p-6 rounded-2xl mt-4">
-          <p className="uppercase text-pink-400 font-bold mb-3">
-          {comment.user?.email}
-          </p>
-          <p>{comment.comment}</p>
-        </div>
-      ))}
+        )}
+      </div>
 
       {/* Footer */}
       <div className={articleFooter}>Last updated: {formatDate(article.updatedAt)}</div>
@@ -179,10 +186,3 @@ function ArticleByID() {
 }
 
 export default ArticleByID;
-
-// {
-//   "user":"6989799b7013502767d3f82b",
-//   "articleId":"6989750220ce5bf826ec4f7e",
-//   "comment":"good article"
-
-// }

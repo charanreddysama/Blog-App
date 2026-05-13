@@ -41,9 +41,13 @@ function Header() {
     <nav className={navbarClass}>
       <div className={navContainerClass}>
         {/* Logo */}
-        <NavLink to="/" className={navBrandClass}>
-          MyBlog
-        </NavLink>
+        <img src="https://cdn.iconscout.com/icon/free/png-256/free-blog-logo-icon-svg-download-png-100136.png" 
+        alt="logo"
+        className="h-10 w-10 rounded-full mr-2" />
+        <h2 className={navBrandClass}>
+          MyBlogApp
+        </h2>
+        
 
         <ul className={navLinksClass}>
           {/* Always visible */}
